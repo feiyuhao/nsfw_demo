@@ -11,6 +11,12 @@ router.get('/', async function (req, res, next) {
     req.query.file.slice(0, 4) == 'http' ||
     req.query.file.slice(0, 5) == 'https'
   ) {
+    const filename = req.query.file; // 文件名
+    const suffix = filename.substr(filename.lastIndexOf('.') + 1); // 文件后缀
+    console.log(suffix);
+    if (!/(jpeg|jpg|png)$/i.test(suffix)) {
+      return res.json({ code: 201, msg: '请上传jpg或png图片' });
+    }
     let pic = await axios
       .get(req.query.file, {
         responseType: 'arraybuffer'
@@ -18,10 +24,10 @@ router.get('/', async function (req, res, next) {
       .catch(err => {
         return res.json({ code: 202, data: req.query.file, msg: '判断失败' });
       });
-
-
-
-    const model = await nsfw.load("http://"+req.headers.host+"/model/", { size: 299 }); // To load a local model, nsfw.load('file://./path/to/model/')
+    console.log(pic.data);
+    const model = await nsfw.load('http://' + req.headers.host + '/model/', {
+      size: 299
+    }); // To load a local model, nsfw.load('file://./path/to/model/')
     // 图像必须tf.tensor3d格式
     // 您可以将图像转换为tf.tensor3d带 tf.node.decodeImage(Uint8Array,channels)
     let image = '';
@@ -32,12 +38,11 @@ router.get('/', async function (req, res, next) {
       return res.json({ code: 202, data: req.query.file, msg: '判断失败' });
     }
 
-   
     const predictions = await model.classify(image).catch(err => {
       return res.json({ code: 202, data: req.query.file, msg: '判断失败' });
     });
     image.dispose(); // 必须显式地管理张量内存(让tf.tentor超出范围才能释放其内存是不够的)。
-  
+
     let balk = [];
     let x = {};
     predictions.forEach(item => {
